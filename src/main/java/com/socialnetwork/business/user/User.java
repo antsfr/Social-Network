@@ -1,6 +1,8 @@
 package com.socialnetwork.business.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.socialnetwork.business.post.Post;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,6 +30,7 @@ public class User {
     )
     @Column(name = "user_id")
     private Long id;
+    @JsonView(Post.View.class)
     //@Pattern(regexp = "[a-zA-Z1-9_]{4,16}")
     private String username;
     //@Pattern(regexp = ".+@.+\\..+.")

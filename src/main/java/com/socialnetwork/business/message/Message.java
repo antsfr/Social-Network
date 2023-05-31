@@ -45,7 +45,7 @@ public class Message implements Comparable<Message> {
 
     @Override
     public int compareTo(Message o) {
-        return this.getDate().compareTo(o.getDate());
+        return -(this.getDate().compareTo(o.getDate()));
     }
 
 

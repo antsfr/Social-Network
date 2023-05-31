@@ -1,5 +1,6 @@
 package com.socialnetwork.presentation;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import com.socialnetwork.business.post.Post;
 import com.socialnetwork.business.post.PostService;
 import com.socialnetwork.business.user.User;
@@ -14,9 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/post")
@@ -75,6 +74,19 @@ public class PostController {
         newPost.setDate(LocalDateTime.now());
         newPost.setAuthor(user);
         postService.addPost(newPost);
+    }
+
+    @JsonView({Post.View.class})
+    @GetMapping("/feed")
+    public List<Post> getFeed(@AuthenticationPrincipal UserDetails userDetails) {
+        User subscriber = getUserIfExists(userDetails);
+        List<Post> feed = new ArrayList<>();
+        for (Long userId: subscriber.getSubscriptions()) {
+            User subscription = userService.getUserById(userId).get();
+            feed.addAll(postService.getPostsByUser(subscription));
+        }
+        Collections.sort(feed);
+        return feed;
     }
 
 
