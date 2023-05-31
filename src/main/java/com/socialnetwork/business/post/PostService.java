@@ -12,7 +12,6 @@ import java.util.Optional;
 @Service
 public class PostService {
     private final PostRepository postRepository;
-    private final List<Post> posts = new ArrayList<>();
 
     @Autowired
     PostService(PostRepository postRepository) {
@@ -31,13 +30,16 @@ public class PostService {
         return postRepository.findById(id);
     }
 
-    public List<Post> getPostsByUser(User user) {;
+    public List<Post> getPostsByUser(User user) {
         return postRepository.findByAuthorOrderByDateDesc(user);
     }
 
-    public List<Post> getAllPosts() {
-        posts.clear();
-        postRepository.findAll().forEach(posts::add);
+    public List<Post> getPostsBySubscriptions(User subscriber, Integer pageNumber) {
+        List<Post> posts = new ArrayList<>();
+        Integer pageSize = 10;    //TODO: вынести в конфиг
+        Integer postNumberToStart = 1 + (pageNumber - 1) * pageSize;
+        posts.addAll(postRepository.findBySubscriptions(subscriber.getId(), postNumberToStart, pageSize));
         return posts;
     }
+
 }

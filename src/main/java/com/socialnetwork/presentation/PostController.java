@@ -30,12 +30,6 @@ public class PostController {
         this.userService= userService;
     }
 
-//    @GetMapping("/{postId}")
-//    public ResponseEntity<Post> getPost(@PathVariable("postId") Long id) {
-//        Post post = postService.getPostById(id).orElseThrow(
-//                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such post"));
-//        return ResponseEntity.ok().body(post);
-//    }
 
     @PostMapping("/new")
     public ResponseEntity<Map<String, Long>> postPost(@Valid @RequestBody Post post,
@@ -59,8 +53,6 @@ public class PostController {
         Post post = getPostIfExists(id);
         User user = getUserIfExists(userDetails);
         checkIfUserIsAuthorOfPost(post, user);
-//        if (!post.getAuthor().getId().equals(user.getId()))
-//            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not author");
         postService.deletePost(id);
     }
 
@@ -77,15 +69,11 @@ public class PostController {
     }
 
     @JsonView({Post.View.class})
-    @GetMapping("/feed")
-    public List<Post> getFeed(@AuthenticationPrincipal UserDetails userDetails) {
+    @GetMapping("/feed/{pageNumber}")
+    public List<Post> getFeed(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Integer pageNumber) {
         User subscriber = getUserIfExists(userDetails);
         List<Post> feed = new ArrayList<>();
-        for (Long userId: subscriber.getSubscriptions()) {
-            User subscription = userService.getUserById(userId).get();
-            feed.addAll(postService.getPostsByUser(subscription));
-        }
-        Collections.sort(feed);
+        feed.addAll(postService.getPostsBySubscriptions(subscriber, pageNumber));
         return feed;
     }
 
