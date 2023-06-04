@@ -1,4 +1,4 @@
-package com.socialnetwork.security.jwt;
+package com.socialnetwork.config.security.jwt;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;

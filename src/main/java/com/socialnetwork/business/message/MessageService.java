@@ -17,9 +17,9 @@ public class MessageService {
         this.messageRepository = messageRepository;
     }
 
-    public void saveMessage(Message message) {
+    public Message sendMessage(Message message) {
         message.setDate(LocalDateTime.now());
-        messageRepository.save(message);
+        return messageRepository.save(message);
     }
 
     public List<Message> getDialogWithUser(User sender, User receiver) {

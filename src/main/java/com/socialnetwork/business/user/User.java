@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import javax.persistence.*;
-import javax.validation.constraints.*;
+import javax.validation.constraints.Pattern;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,33 +28,17 @@ public class User {
             strategy = GenerationType.SEQUENCE,
             generator = "user_sequence"
     )
-    @Column(name = "user_id")
     private Long id;
     @JsonView(Post.View.class)
-    //@Pattern(regexp = "[a-zA-Z1-9_]{4,16}")
+    @Pattern(regexp = "[a-zA-Z1-9_]{4,24}")
     private String username;
-    //@Pattern(regexp = ".+@.+\\..+.")
+    @Pattern(regexp = ".+@.+\\..+")
     private String email;
-    //@Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=\\S+$).{8,}$")
+    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=\\S+$).{8,}$")
     private String password;
 
-//    @ManyToMany(fetch = FetchType.LAZY)
-//    @JoinTable(name="subscription",
-//            joinColumns={@JoinColumn(name="user_id")},
-//            inverseJoinColumns={@JoinColumn(name="anotherUser_id")})
-    //@JsonIgnore
     @ElementCollection
     private Set<Long> subscriptions = new HashSet<>();
-
-//    @ManyToMany(fetch = FetchType.LAZY)
-//    @JoinTable(name="subscription",
-//            joinColumns={@JoinColumn(name="anotherUser_id")},
-//            inverseJoinColumns={@JoinColumn(name="user_id")})
-    //@JsonIgnore
     @ElementCollection
     private Set<Long> subscribers = new HashSet<>();
-//    @ElementCollection
-//    private Set<Long> friends = new HashSet<>();
-//    @OneToMany
-//    private Set<FriendshipRequest> friendshipRequests = new HashSet<>();
 }

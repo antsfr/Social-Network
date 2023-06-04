@@ -1,8 +1,13 @@
 package com.socialnetwork.presentation;
 
-import com.socialnetwork.security.jwt.JwtResponse;
+import com.socialnetwork.config.security.jwt.JwtResponse;
 import com.socialnetwork.business.user.LoginRequest;
-import com.socialnetwork.security.jwt.JwtUtils;
+import com.socialnetwork.config.security.jwt.JwtUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +29,9 @@ import java.util.Collections;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/user")
 @Validated
+@RequestMapping("/api")
+@Tag(name = "Users")
 public class UserController {
 
     @Autowired
@@ -36,17 +42,44 @@ public class UserController {
     private AuthenticationManager authenticationManager;
 
 
+    @Operation(
+            summary = "Зарегистрироваться",
+            responses = {
+                    @ApiResponse(
+                            description = "Учетная запись создана",
+                            responseCode = "201"
+                    ),
+                    @ApiResponse(
+                            description = "Указанные данные невалидны / E-mail или username заняты",
+                            responseCode = "400"
+                    )
+            }
+    )
+    @SecurityRequirements
     @PostMapping("/register")
-    @ResponseStatus(code = HttpStatus.OK)
     public ResponseEntity<Map<String, Long>> registerUser(@Valid @RequestBody User user) {
         if (userService.getUserByEmail(user.getEmail()).isPresent())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User with this EMAIL is already registered");
         if (userService.getUserByUsername(user.getUsername()).isPresent())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User with this USERNAME is already registered");
 
-        return ResponseEntity.ok(Collections.singletonMap("id", userService.addUser(user)));
+        return new ResponseEntity<>(Collections.singletonMap("id", userService.addUser(user)), HttpStatus.CREATED);
     }
 
+    @Operation(
+            summary = "Авторизоваться",
+            responses = {
+                    @ApiResponse(
+                            description = "Вход выполнен",
+                            responseCode = "200"
+                    ),
+                    @ApiResponse(
+                            description = "Указанные данные неверны / невалидны",
+                            responseCode = "400"
+                    )
+            }
+    )
+    @SecurityRequirements
     @PostMapping("/login")
     @ResponseStatus(code = HttpStatus.OK)
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest loginForm) {
@@ -63,54 +96,86 @@ public class UserController {
         }
     }
 
-    @PostMapping("{userId}/subscribe")
+    @Operation(
+            summary = "Подписаться на пользователя",
+            responses = {
+                    @ApiResponse(
+                            description = "Подписка выполнена",
+                            responseCode = "200"
+                    ),
+                    @ApiResponse(
+                            description = "Пользователь не найден",
+                            responseCode = "404"
+                    ),
+                    @ApiResponse(
+                            description = "Подписка на себя / Повторная подписка невозможны",
+                            responseCode = "400"
+                    )
+            }
+    )
+    @PostMapping("user/{userId}/subscribe")
     @ResponseStatus(code = HttpStatus.OK)
     public void subscribe(@PathVariable("userId") Long userId, @AuthenticationPrincipal UserDetails userDetails) {
-        User userReceivingSubscription = getUserIfExists(userId);
-        User userSubscribing = userService.getUserByUsername(userDetails.getUsername()).get();
-        checkForSelfSubscription(userSubscribing, userReceivingSubscription);
-        checkIfAlreadySubscribed(userSubscribing, userReceivingSubscription);
+        User userToSubscribeTo = getUserIfExists(userId);
+        User subscriber = userService.getUserByUsername(userDetails.getUsername()).get();
+        checkForSelfSubscription(subscriber, userToSubscribeTo);
+        checkIfAlreadySubscribed(subscriber, userToSubscribeTo);
 
-        userReceivingSubscription.getSubscribers().add(userSubscribing.getId());
-        userSubscribing.getSubscriptions().add(userReceivingSubscription.getId());
+        subscriber.getSubscriptions().add(userToSubscribeTo.getId());
+        userToSubscribeTo.getSubscribers().add(subscriber.getId());
 
-        userService.updateUser(userSubscribing);
-        userService.updateUser(userReceivingSubscription);
-
+        userService.updateUser(subscriber);
+        userService.updateUser(userToSubscribeTo);
     }
 
-    @PostMapping("{userId}/unsubscribe")
+    @Operation(
+            summary = "Отписаться от пользователя",
+            responses = {
+                    @ApiResponse(
+                            description = "Отпиписка выполнена",
+                            responseCode = "200"
+                    ),
+                    @ApiResponse(
+                            description = "Пользователь не найден",
+                            responseCode = "404"
+                    ),
+                    @ApiResponse(
+                            description = "Отписаться от того, на кого подписки нет, невозможно",
+                            responseCode = "400"
+                    )
+            }
+    )
+    @PostMapping("user/{userId}/unsubscribe")
     @ResponseStatus(code = HttpStatus.OK)
     public void unsubscribe(@PathVariable("userId") Long userId, @AuthenticationPrincipal UserDetails userDetails) {
-        User userReceivingSubscription = getUserIfExists(userId);
-        User userSubscribing = userService.getUserByUsername(userDetails.getUsername()).get();
-        checkForSelfSubscription(userSubscribing, userReceivingSubscription);
-        checkIfNotSubscribed(userSubscribing, userReceivingSubscription);
+        User userToUnsubscribeFrom = getUserIfExists(userId);
+        User subscriber = userService.getUserByUsername(userDetails.getUsername()).get();
+        checkForSelfSubscription(subscriber, userToUnsubscribeFrom);
+        checkIfNotSubscribed(subscriber, userToUnsubscribeFrom);
 
-        userReceivingSubscription.getSubscribers().remove(userSubscribing.getId());
-        userSubscribing.getSubscriptions().remove(userReceivingSubscription.getId());
+        userToUnsubscribeFrom.getSubscribers().remove(subscriber.getId());
+        subscriber.getSubscriptions().remove(userToUnsubscribeFrom.getId());
 
-        userService.updateUser(userSubscribing);
-        userService.updateUser(userReceivingSubscription);
+        userService.updateUser(subscriber);
+        userService.updateUser(userToUnsubscribeFrom);
     }
 
-//    @GetMapping("{userId}/subscriptions")
-//    public void getSubscriptions(@PathVariable("userId") Long userId) {
-//
-//    }
 
     private User getUserIfExists(Long userId) {
         return userService.getUserById(userId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No such user"));
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such user"));
     }
+
     private void checkForSelfSubscription(User u1, User u2) {
         if (u1.getId().equals(u2.getId()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Self-subscription is not supported");
     }
+
     private void checkIfAlreadySubscribed(User subscriber, User subscription) {
         if (subscriber.getSubscriptions().contains(subscription.getId()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are already subscribed");
     }
+
     private void checkIfNotSubscribed(User subscriber, User subscription) {
         if (!subscriber.getSubscriptions().contains(subscription.getId()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are not subscribed");

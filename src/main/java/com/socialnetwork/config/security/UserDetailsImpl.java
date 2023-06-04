@@ -1,4 +1,4 @@
-package com.socialnetwork.security;
+package com.socialnetwork.config.security;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

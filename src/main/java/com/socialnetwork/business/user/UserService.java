@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.socialnetwork.persistence.UserRepository;
-import com.socialnetwork.security.UserDetailsImpl;
+import com.socialnetwork.config.security.UserDetailsImpl;
 import java.util.Optional;
 
 @Service

@@ -13,7 +13,7 @@ import java.util.List;
 public interface PostRepository extends CrudRepository<Post, Long> {
     List<Post> findByAuthorOrderByDateDesc(User user);
     String GET_POSTS_BY_SUBSCRIPTIONS = "SELECT * FROM post WHERE user_id IN " +
-            "(SELECT subscriptions FROM user_subscriptions WHERE user_user_id = :subscriberId) " +
+            "(SELECT subscriptions FROM user_subscriptions WHERE user_id = :subscriberId) " +
             "ORDER BY date DESC " +
             "OFFSET :postNumberToStart LIMIT :pageSize";
     @Query(value = GET_POSTS_BY_SUBSCRIPTIONS, nativeQuery = true)

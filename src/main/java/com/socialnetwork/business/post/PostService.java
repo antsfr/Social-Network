@@ -18,8 +18,8 @@ public class PostService {
         this.postRepository = postRepository;
     }
 
-    public Long addPost(Post post) {
-        return postRepository.save(post).getId();
+    public Post addPost(Post post) {
+        return postRepository.save(post);
     }
 
     public void deletePost(Long id) {
