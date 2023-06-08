@@ -1,11 +1,11 @@
 package com.socialnetwork.presentation;
 
+import com.socialnetwork.business.friendship.FriendshipService;
 import com.socialnetwork.config.security.jwt.JwtResponse;
 import com.socialnetwork.business.user.LoginRequest;
 import com.socialnetwork.config.security.jwt.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +34,8 @@ import java.util.Map;
 @Tag(name = "Users")
 public class UserController {
 
+    @Autowired
+    private FriendshipService friendshipService;
     @Autowired
     private UserService userService;
     @Autowired
@@ -116,16 +118,16 @@ public class UserController {
     @PostMapping("user/{userId}/subscribe")
     @ResponseStatus(code = HttpStatus.OK)
     public void subscribe(@PathVariable("userId") Long userId, @AuthenticationPrincipal UserDetails userDetails) {
-        User userToSubscribeTo = getUserIfExists(userId);
+        User receiver = getUserIfExists(userId);
         User subscriber = userService.getUserByUsername(userDetails.getUsername()).get();
-        checkForSelfSubscription(subscriber, userToSubscribeTo);
-        checkIfAlreadySubscribed(subscriber, userToSubscribeTo);
+        checkForSelfSubscription(subscriber, receiver);
+        checkForRepetitiveSubscription(subscriber, receiver);
 
-        subscriber.getSubscriptions().add(userToSubscribeTo.getId());
-        userToSubscribeTo.getSubscribers().add(subscriber.getId());
-
-        userService.updateUser(subscriber);
-        userService.updateUser(userToSubscribeTo);
+        if (existsRequestFromReceiver(subscriber, receiver)) {
+            friendshipService.acceptFriendshipRequest(receiver, subscriber);
+            return;
+        }
+        friendshipService.sendFriendshipRequest(subscriber, receiver);
     }
 
     @Operation(
@@ -153,11 +155,11 @@ public class UserController {
         checkForSelfSubscription(subscriber, userToUnsubscribeFrom);
         checkIfNotSubscribed(subscriber, userToUnsubscribeFrom);
 
-        userToUnsubscribeFrom.getSubscribers().remove(subscriber.getId());
-        subscriber.getSubscriptions().remove(userToUnsubscribeFrom.getId());
-
-        userService.updateUser(subscriber);
-        userService.updateUser(userToUnsubscribeFrom);
+        if (areFriends(subscriber, userToUnsubscribeFrom)) {
+            friendshipService.quitFriendship(subscriber, userToUnsubscribeFrom);
+            return;
+        }
+        friendshipService.quitSubscription(subscriber, userToUnsubscribeFrom);
     }
 
 
@@ -171,14 +173,22 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Self-subscription is not supported");
     }
 
-    private void checkIfAlreadySubscribed(User subscriber, User subscription) {
-        if (subscriber.getSubscriptions().contains(subscription.getId()))
+    private void checkForRepetitiveSubscription(User subscriber, User subscription) {
+        if (subscriber.getSubscriptions().contains(subscription))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are already subscribed");
     }
 
     private void checkIfNotSubscribed(User subscriber, User subscription) {
-        if (!subscriber.getSubscriptions().contains(subscription.getId()))
+        if (!subscriber.getSubscriptions().contains(subscription))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You are not subscribed");
+    }
+
+    private boolean existsRequestFromReceiver(User sender, User receiver) {
+        return receiver.getSubscriptions().contains(sender);
+    }
+
+    private boolean areFriends(User u1, User u2) {
+        return u2.getSubscriptions().contains(u1) && u1.getSubscriptions().contains(u2);
     }
 
 }

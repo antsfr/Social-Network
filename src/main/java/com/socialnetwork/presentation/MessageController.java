@@ -90,7 +90,7 @@ public class MessageController {
     }
 
     private void checkForFriendship(User u1, User u2) {
-        if ((u1.getSubscriptions().contains(u2.getId()) && u2.getSubscriptions().contains(u1.getId())))
+        if ((u1.getSubscriptions().contains(u2) && u2.getSubscriptions().contains(u1)))
             return;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can text only to your friends");
     }
